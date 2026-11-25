@@ -49,6 +49,6 @@ def test_search_no_hit_returns_empty():
 
 def test_loader_filters_unsupported(tmp_path: Path):
     (tmp_path / "a.md").write_text("# A\n内容", encoding="utf-8")
-    (tmp_path / "b.pdf").write_bytes(b"%PDF-1.4")
+    (tmp_path / "b.xyz").write_bytes(b"binary")
     docs = load_directory(tmp_path)
     assert [d.path for d in docs] == [str(tmp_path / "a.md")]

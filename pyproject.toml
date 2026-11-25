@@ -11,6 +11,9 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6", "setuptools>=68"]
+pdf = ["pymupdf>=1.28"]
+docx = ["python-docx>=1.2"]
+docling = ["docling>=2.150"]
 
 [project.scripts]
 aiknow = "aiknow.__main__:main"
