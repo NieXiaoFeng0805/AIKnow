@@ -1,0 +1,2 @@
+[console_scripts]
+aiknow = aiknow.__main__:main

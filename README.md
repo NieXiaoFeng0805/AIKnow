@@ -14,16 +14,28 @@
 
 选型原则：从真实问题清单反推（要几段原文 / 几个字段 / 几跳关系），不先建图。
 
-## 规划中的目录
+## 目录
 
 ```
-docs/      方案、决策记录、评测集说明
-ingest/    采集与解析（PDF/Word/HTML/表格/OCR）
-pipeline/  切分、抽取、入库
-retrieval/ 混合检索 + rerank + 图扩展
+docs/      方案、决策记录（ADR）
+  decision/0001 路线：先 RAG 后图谱
+  decision/0002 防过时原则
+ingest/    采集与解析（loader.py：目前 .md/.txt）
+pipeline/  切分（chunker.py：按标题结构、表格独立、带偏移）
+retrieval/ 检索（bm25.py 纯 Python + index.py 对外接口）
 eval/      黄金集与回归评测
-apps/      问答接口 / 前端
+aiknow/    CLI 入口（python -m aiknow）
+tests/     回归测试与 fixtures
 ```
+
+## 用法
+
+```bash
+aiknow index --dir /path/to/kb            # 文档数 / 切块数
+aiknow ask "一线城市住宿上限是多少" --dir /path/to/kb -k 3
+```
+
+输出带出处（文件 + 章节路径），便于引用回链。
 
 ## 开发
 
