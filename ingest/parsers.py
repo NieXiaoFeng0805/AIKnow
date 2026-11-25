@@ -13,6 +13,9 @@
 from __future__ import annotations
 
 import os
+import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from ingest.model import Document, doc_id_for
@@ -49,12 +52,55 @@ def docling_available() -> bool:
     return True
 
 
-def _parse_docling(path: Path) -> Document:
-    from docling.document_converter import DocumentConverter
+@contextmanager
+def _sanitized_no_proxy() -> Iterator[None]:
+    """去掉 NO_PROXY 里的 [::1] 一类条目。
 
-    result = DocumentConverter().convert(str(path))
-    md = result.document.export_to_markdown()
-    return _make_document(path, md, "docling")
+    本机环境把它设成 "...,::1,[::1]"，httpx 解析时会抛 Invalid port: ':1]'，
+    导致 docling/HF 直接失败。这里只在转换期间清理，结束后还原。
+    """
+    keys = ("NO_PROXY", "no_proxy")
+    saved = {k: os.environ.get(k) for k in keys}
+    for k in keys:
+        raw = os.environ.get(k)
+        if raw:
+            kept = [item for item in raw.split(",") if item.strip() and "[" not in item]
+            os.environ[k] = ",".join(kept)
+    try:
+        yield
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+
+def _parse_docling(path: Path) -> Document:
+    """docling 转换。
+
+    默认关闭表格结构模型（会额外拉 ~200MB 权重，且 CPU 上很慢）；
+    AIKNOW_DOCLING_TABLES=1 打开。OCR 同理用 AIKNOW_DOCLING_OCR=1。
+    """
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions
+    from docling.document_converter import DocumentConverter, PdfFormatOption
+
+    use_tables = os.environ.get("AIKNOW_DOCLING_TABLES", "0") == "1"
+    use_ocr = os.environ.get("AIKNOW_DOCLING_OCR", "0") == "1"
+
+    if path.suffix.lower() == ".pdf":
+        opts = PdfPipelineOptions(do_table_structure=use_tables, do_ocr=use_ocr)
+        converter = DocumentConverter(
+            format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=opts)}
+        )
+    else:
+        converter = DocumentConverter()
+
+    with _sanitized_no_proxy():
+        md = converter.convert(str(path)).document.export_to_markdown()
+    backend = "docling" if not use_tables else "docling+tables"
+    return _make_document(path, md, backend)
 
 
 def _pdf_block_lines(page) -> list[tuple[float, str]]:
@@ -141,16 +187,29 @@ def parse_file(path: str | Path, prefer_docling: bool | None = None) -> Document
         raise FileNotFoundError(str(p))
     suffix = p.suffix.lower()
     use_docling = docling_available() if prefer_docling is None else prefer_docling
+    use_docling = use_docling and docling_available()
+
+    def try_docling() -> Document | None:
+        try:
+            return _parse_docling(p)
+        except Exception as exc:  # noqa: BLE001
+            # 模型缺失/下载失败/版本不兼容时不阻断整条流水线
+            sys.stderr.write(f"[aiknow] docling 失败，降级: {exc}\n")
+            return None
 
     if suffix in TEXT_SUFFIXES:
         return _parse_text(p)
     if suffix == ".pdf":
-        if use_docling and docling_available():
-            return _parse_docling(p)
+        if use_docling:
+            doc = try_docling()
+            if doc is not None:
+                return doc
         return _parse_pdf(p)
     if suffix in {".docx", ".doc"}:
-        if use_docling and docling_available():
-            return _parse_docling(p)
+        if use_docling:
+            doc = try_docling()
+            if doc is not None:
+                return doc
         if suffix == ".doc":
             raise ValueError("旧版 .doc 需要先另存为 .docx 或安装 docling")
         return _parse_docx(p)

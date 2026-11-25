@@ -79,3 +79,17 @@ def test_loader_accepts_pdf_pdf_and_docx(tmp_path: Path):
     docs = load_directory(tmp_path)
     assert len(docs) == 3
     assert {d.meta["suffix"] for d in docs} == {".pdf", ".docx", ".md"}
+
+
+def test_docling_failure_falls_back_to_pymupdf(monkeypatch, tmp_path: Path):
+    from ingest import parsers
+
+    p = tmp_path / "fallback.pdf"
+    _make_pdf(p)
+
+    def boom(_path):
+        raise RuntimeError("model missing")
+
+    monkeypatch.setattr(parsers, "_parse_docling", boom)
+    doc = parsers.parse_file(p, prefer_docling=True)
+    assert doc.meta["backend"] == "pymupdf"

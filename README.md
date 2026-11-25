@@ -42,14 +42,25 @@ aiknow ask "一线城市住宿上限是多少" --dir /path/to/kb -k 3
 | 格式 | 后端 | 说明 |
 |---|---|---|
 | `.md` / `.txt` | 内置 | 按标题结构切分 |
-| `.pdf` | pymupdf（默认） | 抽文本 + 字号启发式识别标题；快，但双栏排版会串行、表格会散 |
-| `.pdf` / `.docx` | docling（装了就用） | 版面与表格感知，质量更好，依赖重（含 torch） |
-| `.docx` | python-docx（兜底） | 按样式还原标题与表格 |
+| `.pdf` / `.docx` | docling（装了就用） | 有版面分析，标题层级与段落顺序可靠；CPU 上约 2.8 s/页 |
+| `.pdf` | pymupdf（降级/快速） | 只抽文本 + 字号判标题，约 0.04 s/页；双栏会串 |
+| `.docx` | python-docx（降级） | 按样式还原标题与表格 |
 
-安装可选依赖：`pip install -e ".[pdf,docx]"`，docling 单独用 `-e ".[docling]"`。
-环境变量 `AIKNOW_DOCLING=0` 可强制走轻量后端。
+实测对比见 [docs/parsing-benchmark.md](docs/parsing-benchmark.md)。
 
-已知局限：暂不支持中英文跨语言检索（中文问、英文文档命中不了），表格解析质量取决于后端。
+安装可选依赖：`pip install -e ".[pdf,docx]"`，docling 用 `-e ".[docling]"`（先装 CPU 版 torch，否则会拉几 GB CUDA 库）。
+
+环境变量：
+
+| 变量 | 默认 | 作用 |
+|---|---|---|
+| `AIKNOW_DOCLING` | 自动 | `0` 强制走轻量后端 |
+| `AIKNOW_DOCLING_TABLES` | `0` | `1` 启用表格结构模型（额外 ~200MB 权重） |
+| `AIKNOW_DOCLING_OCR` | `0` | `1` 启用 OCR（扫描件需要） |
+
+docling 失败会自动降级到 pymupdf，不会中断入库。
+
+已知局限：暂不支持中英文跨语言检索（中文问、英文文档命中不了）。
 
 ## 开发
 
