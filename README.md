@@ -25,6 +25,17 @@ eval/      黄金集与回归评测
 apps/      问答接口 / 前端
 ```
 
+## 开发
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev]"
+.venv/bin/pytest -q
+.venv/bin/ruff check .
+```
+
+本机现状：Python 3.14.4，`.venv` 已就绪（不入库）。
+
 ## 关键约定
 
 - 原文 + PostgreSQL 是源真相；向量库、图库都是可重建的派生索引。
