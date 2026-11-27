@@ -37,7 +37,7 @@ def _make_pdf(path: Path) -> None:
 def test_parse_docx_keeps_headings_and_table(tmp_path: Path):
     p = tmp_path / "manual.docx"
     _make_docx(p)
-    doc = parse_file(p, prefer_docling=False)
+    doc = parse_file(p, "life", prefer_docling=False)
     assert doc.meta["backend"] == "python-docx"
     assert "# 设备维护手册" in doc.text
     assert "## 更换滤芯" in doc.text
@@ -48,7 +48,7 @@ def test_parse_docx_keeps_headings_and_table(tmp_path: Path):
 def test_parse_pdf_extracts_text(tmp_path: Path):
     p = tmp_path / "report.pdf"
     _make_pdf(p)
-    doc = parse_file(p, prefer_docling=False)
+    doc = parse_file(p, "life", prefer_docling=False)
     assert doc.meta["backend"] == "pymupdf"
     assert "Annual Report 2026" in doc.text
     assert "12.5 million" in doc.text
@@ -59,7 +59,7 @@ def test_parse_pdf_detects_big_title_as_heading(tmp_path: Path):
 
     p = tmp_path / "report2.pdf"
     _make_pdf(p)
-    doc = parse_file(p, prefer_docling=False)
+    doc = parse_file(p, "life", prefer_docling=False)
     assert re.search(r"^#{1,6} Annual Report 2026$", doc.text, re.MULTILINE)
 
 
@@ -67,7 +67,7 @@ def test_unknown_suffix_rejected(tmp_path: Path):
     p = tmp_path / "a.xyz"
     p.write_text("x", encoding="utf-8")
     with pytest.raises(ValueError):
-        parse_file(p)
+        parse_file(p, "life")
 
 
 def test_loader_accepts_pdf_pdf_and_docx(tmp_path: Path):
@@ -76,7 +76,7 @@ def test_loader_accepts_pdf_pdf_and_docx(tmp_path: Path):
     (tmp_path / "c.md").write_text("# C\n正文", encoding="utf-8")
     from ingest.loader import load_directory
 
-    docs = load_directory(tmp_path)
+    docs = load_directory(tmp_path, "life")
     assert len(docs) == 3
     assert {d.meta["suffix"] for d in docs} == {".pdf", ".docx", ".md"}
 
@@ -91,5 +91,5 @@ def test_docling_failure_falls_back_to_pymupdf(monkeypatch, tmp_path: Path):
         raise RuntimeError("model missing")
 
     monkeypatch.setattr(parsers, "_parse_docling", boom)
-    doc = parsers.parse_file(p, prefer_docling=True)
+    doc = parsers.parse_file(p, "life", prefer_docling=True)
     assert doc.meta["backend"] == "pymupdf"

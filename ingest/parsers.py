@@ -16,30 +16,42 @@ import os
 import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import replace
+from datetime import datetime
 from pathlib import Path
 
-from ingest.model import Document, doc_id_for
+from ingest.model import Document, doc_id_for, source_type_for
 
 TEXT_SUFFIXES = {".md", ".markdown", ".txt"}
 
 
-def _make_document(path: Path, text: str, backend: str) -> Document:
+def _make_document(
+    path: Path, text: str, backend: str, zone_id: str, source_type: str | None = None
+) -> Document:
     title = path.stem
     for line in text.splitlines():
         if line.startswith("# "):
             title = line[2:].strip()
             break
+    st = path.stat()
     return Document(
-        doc_id=doc_id_for(path, text),
+        doc_id=doc_id_for(zone_id, path, text),
         path=str(path),
         title=title,
         text=text,
-        meta={"suffix": path.suffix.lower(), "size": len(text), "backend": backend},
+        zone_id=zone_id,
+        source_type=source_type or source_type_for(path),
+        meta={
+            "suffix": path.suffix.lower(),
+            "size": len(text),
+            "backend": backend,
+            "date": datetime.fromtimestamp(st.st_mtime).date().isoformat(),
+        },
     )
 
 
-def _parse_text(path: Path) -> Document:
-    return _make_document(path, path.read_text(encoding="utf-8"), "text")
+def _parse_text(path: Path, zone_id: str) -> Document:
+    return _make_document(path, path.read_text(encoding="utf-8"), "text", zone_id)
 
 
 def docling_available() -> bool:
@@ -76,7 +88,7 @@ def _sanitized_no_proxy() -> Iterator[None]:
                 os.environ[k] = v
 
 
-def _parse_docling(path: Path) -> Document:
+def _parse_docling(path: Path, zone_id: str) -> Document:
     """docling 转换。
 
     默认关闭表格结构模型（会额外拉 ~200MB 权重，且 CPU 上很慢）；
@@ -100,7 +112,7 @@ def _parse_docling(path: Path) -> Document:
     with _sanitized_no_proxy():
         md = converter.convert(str(path)).document.export_to_markdown()
     backend = "docling" if not use_tables else "docling+tables"
-    return _make_document(path, md, backend)
+    return _make_document(path, md, backend, zone_id)
 
 
 def _pdf_block_lines(page) -> list[tuple[float, str]]:
@@ -124,7 +136,7 @@ def _pdf_heading_level(size: float, median: float, distinct: list[float]) -> int
     return min(rank + 1, 6)
 
 
-def _parse_pdf(path: Path) -> Document:
+def _parse_pdf(path: Path, zone_id: str) -> Document:
     import pymupdf
 
     parts: list[str] = []
@@ -144,10 +156,10 @@ def _parse_pdf(path: Path) -> Document:
                 else:
                     parts.append(text)
             parts.append("")
-    return _make_document(path, "\n".join(parts), "pymupdf")
+    return _make_document(path, "\n".join(parts), "pymupdf", zone_id)
 
 
-def _parse_docx(path: Path) -> Document:
+def _parse_docx(path: Path, zone_id: str) -> Document:
     import docx
     from docx.table import Table
     from docx.text.paragraph import Paragraph
@@ -178,10 +190,15 @@ def _parse_docx(path: Path) -> Document:
             parts.append("|" + "---|" * len(rows[0]))
             for r in rows[1:]:
                 parts.append("| " + " | ".join(r) + " |")
-    return _make_document(path, "\n\n".join(parts), "python-docx")
+    return _make_document(path, "\n\n".join(parts), "python-docx", zone_id)
 
 
-def parse_file(path: str | Path, prefer_docling: bool | None = None) -> Document:
+def parse_file(
+    path: str | Path,
+    zone_id: str,
+    prefer_docling: bool | None = None,
+    source_type: str | None = None,
+) -> Document:
     p = Path(path)
     if not p.is_file():
         raise FileNotFoundError(str(p))
@@ -191,26 +208,27 @@ def parse_file(path: str | Path, prefer_docling: bool | None = None) -> Document
 
     def try_docling() -> Document | None:
         try:
-            return _parse_docling(p)
+            return _parse_docling(p, zone_id)
         except Exception as exc:  # noqa: BLE001
             # 模型缺失/下载失败/版本不兼容时不阻断整条流水线
             sys.stderr.write(f"[aiknow] docling 失败，降级: {exc}\n")
             return None
 
     if suffix in TEXT_SUFFIXES:
-        return _parse_text(p)
-    if suffix == ".pdf":
-        if use_docling:
-            doc = try_docling()
-            if doc is not None:
-                return doc
-        return _parse_pdf(p)
-    if suffix in {".docx", ".doc"}:
-        if use_docling:
-            doc = try_docling()
-            if doc is not None:
-                return doc
-        if suffix == ".doc":
-            raise ValueError("旧版 .doc 需要先另存为 .docx 或安装 docling")
-        return _parse_docx(p)
-    raise ValueError(f"不支持的格式: {suffix} ({p})")
+        doc = _parse_text(p, zone_id)
+    elif suffix == ".pdf":
+        doc = try_docling() if use_docling else None
+        if doc is None:
+            doc = _parse_pdf(p, zone_id)
+    elif suffix in {".docx", ".doc"}:
+        doc = try_docling() if use_docling else None
+        if doc is None:
+            if suffix == ".doc":
+                raise ValueError("旧版 .doc 需要先另存为 .docx 或安装 docling")
+            doc = _parse_docx(p, zone_id)
+    else:
+        raise ValueError(f"不支持的格式: {suffix} ({p})")
+
+    if source_type is not None:
+        doc = replace(doc, source_type=source_type)
+    return doc

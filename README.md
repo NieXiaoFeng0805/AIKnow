@@ -8,7 +8,7 @@
 
 | 层 | 解决什么 | 状态 |
 |---|---|---|
-| ① 文档库 + RAG | 答案在一两段原文里 | 待做 |
+| ① 文档库 + RAG | 答案在一两段原文里 | 分区内已跑通（阶段 1，见 design-v3） |
 | ② 结构化知识库 | 精确字段、数值、清单 | 待做 |
 | ③ 知识图谱 | 多跳关系、路径、传导 | 待做 |
 
@@ -17,25 +17,49 @@
 ## 目录
 
 ```
+zones.toml 分区注册表（life / work / study）
+kb/        各分区的原始文档（kb/life、kb/work、kb/study）
 docs/      方案、决策记录（ADR）
   decision/0001 路线：先 RAG 后图谱
   decision/0002 防过时原则
-ingest/    采集与解析（loader.py：目前 .md/.txt）
-pipeline/  切分（chunker.py：按标题结构、表格独立、带偏移）
-retrieval/ 检索（bm25.py 纯 Python + index.py 对外接口）
+  decision/0003 分区替代全局问答
+ingest/    采集与解析（zones.py 注册表、loader.py、parsers.py）
+pipeline/  切分（chunker.py：按标题结构、表格独立、带偏移、带 zone）
+retrieval/ 检索（bm25.py 纯 Python + index.py 对外接口，按分区隔离）
 eval/      黄金集与回归评测
 aiknow/    CLI 入口（python -m aiknow）
 tests/     回归测试与 fixtures
+imports/   旧会话导入存档（历史参考，不是方案文档）
 ```
 
 ## 用法
 
 ```bash
-aiknow index --dir /path/to/kb            # 文档数 / 切块数
-aiknow ask "一线城市住宿上限是多少" --dir /path/to/kb -k 3
+aiknow index                                         # 每个分区的文档数 / 切块数
+aiknow ask "一线城市住宿上限是多少" --zone life -k 3
+aiknow ask "周末安排" --zones life,work               # 跨区（默认关闭）
+aiknow ask "住宿上限" --zone life --since 2026-11-01   # 只看该日期之后的文档
 ```
 
-输出带出处（文件 + 章节路径），便于引用回链。
+输出带出处（文件 + 章节路径），便于引用回链；跨区结果会标出来源分区。
+
+## 分区（zone）
+
+`zones.toml` 是唯一的分区来源（见 [docs/design-v3.md](docs/design-v3.md) §1）：
+
+```toml
+[zones.life]
+name = "生活区"
+purpose = "日常、灵感、随手记"
+sources = ["kb/life"]        # 相对 zones.toml 所在目录
+```
+
+规则：
+
+- `doc_id` 含分区：同一份文件放进两个分区是两份文档
+- 每个 chunk 都带 `zone_id`，索引按分区过滤
+- 检索必须指定分区，不传 `--zone` 直接报错，不会默认全库
+- 跨区必须显式 `--zones`，结果标注来源分区
 
 ## 支持的格式
 
@@ -68,7 +92,7 @@ docling 失败会自动降级到 pymupdf，不会中断入库。
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"
 .venv/bin/pytest -q
-.venv/bin/ruff check .
+.venv/bin/ruff check aiknow ingest pipeline retrieval tests   # 别扫 .venv
 ```
 
 本机现状：Python 3.14.4，`.venv` 已就绪（不入库）。

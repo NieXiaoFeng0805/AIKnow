@@ -1,0 +1,19 @@
+# 分区注册表（docs/design-v3 §1、§10 #1）
+#
+# sources 相对本文件所在目录；同一份文件放进不同分区会得到不同的 doc_id，
+# 检索必须显式 --zone，跨区必须显式 --zones（默认关闭）。
+
+[zones.life]
+name = "生活区"
+purpose = "日常、灵感、随手记"
+sources = ["kb/life"]
+
+[zones.work]
+name = "工作区"
+purpose = "技能与实战：帖子、仓库、AI 应用与测试开发"
+sources = ["kb/work"]
+
+[zones.study]
+name = "学习区"
+purpose = "AI 前沿、技术突破、论文"
+sources = ["kb/study"]

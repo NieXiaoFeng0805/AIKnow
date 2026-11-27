@@ -31,6 +31,7 @@ class Chunk:
     start: int = 0
     end: int = 0
     kind: str = "text"  # text | table
+    zone_id: str = ""
     meta: dict = field(default_factory=dict)
 
 
@@ -149,7 +150,14 @@ def chunk_document(doc: Document) -> list[Chunk]:
                     start=cursor,
                     end=cursor + len(piece),
                     kind=block.kind,
-                    meta={"source": doc.path, "title": doc.title},
+                    zone_id=doc.zone_id,
+                    meta={
+                        "source": doc.path,
+                        "title": doc.title,
+                        "zone": doc.zone_id,
+                        "source_type": doc.source_type,
+                        "date": doc.meta.get("date", ""),
+                    },
                 )
             )
             cursor += len(piece)
