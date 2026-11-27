@@ -3,33 +3,63 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AIKnow · 分区检索</title>
+<meta name="color-scheme" content="dark">
+<title>AIKnow · 分区知识库</title>
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-<header>
-  <div class="brand">AIKnow<span class="sub">分区检索</span></div>
-  <div class="meta" id="meta">载入中…</div>
-  <button id="reindex" type="button" class="ghost">重新索引</button>
+<div class="aurora" aria-hidden="true"></div>
+
+<header class="hero">
+  <div class="hero-left">
+    <div class="hero-title"><span class="pulse"></span><h1>AIKnow</h1></div>
+    <p class="hero-sub">分区知识库 · 证据检索</p>
+    <p class="hero-tip" id="heroTip">分区隔离，检索默认不串区</p>
+  </div>
+  <div class="hero-right">
+    <div class="stats" id="stats"></div>
+    <button id="reindex" type="button" class="btn ghost">重新索引</button>
+  </div>
 </header>
-<main>
-  <aside class="zones" id="zones"></aside>
-  <section class="center">
-    <form id="searchform" class="searchbar">
-      <input id="q" type="search" placeholder="问一句话，只在选中的分区里找证据" autocomplete="off" autofocus>
-      <label class="toggle"><input type="checkbox" id="cross"> 跨区</label>
-      <input id="since" type="date" title="只看该日期之后的文档">
-      <button type="submit">检索</button>
-    </form>
+
+<section class="search-shell">
+  <form id="searchform" class="searchbar">
+    <span class="kbd" aria-hidden="true">/</span>
+    <input id="q" type="search" placeholder="问一句话，只在选中的分区里找证据" autocomplete="off" autofocus>
+    <label class="switch" title="默认只查当前分区">
+      <input type="checkbox" id="cross">
+      <span class="track"><span class="knob"></span></span>
+      <span class="label">跨区</span>
+    </label>
+    <input id="since" class="date" type="date" title="只看该日期之后的文档">
+    <button type="submit" class="btn primary">检索</button>
+  </form>
+</section>
+
+<main class="layout">
+  <aside class="rail">
+    <div class="rail-head">分区<span id="zoneCount"></span></div>
+    <div class="zones" id="zones"></div>
+    <div class="rail-foot">文件放 <span class="mono">kb/&lt;zone&gt;/</span> 后点重新索引</div>
+  </aside>
+  <section class="results">
     <div id="status" class="status"></div>
-    <ol id="hits" class="hits"></ol>
+    <div id="hits" class="hits"></div>
     <div id="empty" class="empty" hidden></div>
   </section>
-  <aside id="drawer" class="drawer" hidden>
-    <button id="closeDrawer" class="ghost small" type="button">关闭</button>
-    <div id="drawerBody"></div>
-  </aside>
 </main>
+
+<div id="drawer" class="drawer" hidden>
+  <div class="drawer-mask" id="drawerMask"></div>
+  <aside class="drawer-panel">
+    <div class="drawer-head">
+      <span class="drawer-kicker">原文</span>
+      <button id="closeDrawer" type="button" class="btn ghost tiny">关闭</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </aside>
+</div>
+
 <script src="/app.js"></script>
 </body>
 </html>
