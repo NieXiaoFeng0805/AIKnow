@@ -1,6 +1,7 @@
 # 知识库方案 v2
 
 - 状态：草案（待主人确认三个决策项）
+> 已被 design-v3 取代：无全局问答，community 层与 global/drift 查询砍掉。新方案见 `design-v3.md`。
 - 日期：2026-11-27
 - 依据：v1（ADR-0001/0002）、解析实测（parsing-benchmark.md）、
   知乎《基于知识图谱的个人知识库探索》（[原文](https://zhuanlan.zhihu.com/p/715188052)，2026-11-27 读）

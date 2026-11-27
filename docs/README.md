@@ -4,17 +4,20 @@
 
 | 文件 | 内容 | 状态 |
 |---|---|---|
-| `design-v2.md` | **方案总纲**：三层图、抽取管线、查询路由、溯源契约、成本模型、待决策项 | 草案，待确认 D1–D3 |
+| `design-v3.md` | **方案总纲（当前）**：分区模型、来源适配、数据模型、API 抽取、区内检索、按区评测 | 草案，待 Q1–Q3 |
+| `design-v2.md` | 上一版：三层图 + 三模式查询 | 已被 v3 取代（community/global 砍掉） |
 | `parsing-benchmark.md` | 解析后端实测（pymupdf vs docling） | 已定 |
 | `decision/0001-路线-先RAG后图谱.md` | 三层递进的选择与理由 | 已接受 |
 | `decision/0002-防过时原则.md` | 稳定层/易变层、20% 换库规则 | 已接受 |
+| `decision/0003-分区替代全局问答.md` | 放弃社区层，改为分区驱动 | 已接受 |
 
 ## 约定
 
 - 总纲写结论与权衡；ADR 写单个决策的选项与影响；实测数据单独放 benchmark 文档。
 - 结论进文档，过程留在对话/提交里，不靠口头记忆。
 - 文档与代码不一致时，以文档为准并修代码（方案先行，避免返工）。
+- 新版总纲取代旧版时，旧版保留但标注"已被取代"，不删。
 
 ## 阅读顺序
 
-`design-v2.md` → `decision/0001` → `decision/0002` → `parsing-benchmark.md`
+`design-v3.md` → `decision/0003` → `decision/0001` → `decision/0002` → `parsing-benchmark.md`
