@@ -18,6 +18,7 @@
 
 ```
 zones.toml 分区注册表（life / work / study）
+zones.demo.toml 演示用注册表（扫仓库自带 docs/、imports/）
 kb/        各分区的原始文档（kb/life、kb/work、kb/study）
 docs/      方案、决策记录（ADR）
   decision/0001 路线：先 RAG 后图谱
@@ -27,7 +28,8 @@ ingest/    采集与解析（zones.py 注册表、loader.py、parsers.py）
 pipeline/  切分（chunker.py：按标题结构、表格独立、带偏移、带 zone）
 retrieval/ 检索（bm25.py 纯 Python + index.py 对外接口，按分区隔离）
 eval/      黄金集与回归评测
-aiknow/    CLI 入口（python -m aiknow）
+aiknow/    CLI 入口（python -m aiknow）+ serve.py（本地页面）
+  web/     页面三件套：index.html / app.js / app.css（无构建链）
 tests/     回归测试与 fixtures
 imports/   旧会话导入存档（历史参考，不是方案文档）
 ```
@@ -61,8 +63,32 @@ sources = ["kb/life"]        # 相对 zones.toml 所在目录
 - 检索必须指定分区，不传 `--zone` 直接报错，不会默认全库
 - 跨区必须显式 `--zones`，结果标注来源分区
 
-## 支持的格式
+## 页面
 
+两个命令，先看效果再用真实数据：
+
+```bash
+aiknow serve --config zones.demo.toml --port 8000   # 用仓库自带文档当数据（10 篇 / 459 块）
+aiknow serve --port 8000                            # 用真实数据（扫 kb/life、kb/work、kb/study）
+```
+
+然后打开 http://127.0.0.1:8000/ ：左边分区（带文档数、缺目录告警），中间检索，右边原文抽屉。
+
+接口（页面和将来的 DSH 面板共用这一层）：
+
+| 接口 | 作用 |
+|---|---|
+| `GET /api/zones` | 分区、文档数、切块数、缺目录 |
+| `GET /api/search?q=&zone=&zones=&since=&k=` | 命中证据（分数、分区、出处、章节） |
+| `GET /api/doc?zone=&doc_id=` | 整篇原文与切块，喂右侧抽屉 |
+| `POST /api/reindex` | 重新扫描（放完新文件点「重新索引」） |
+
+技术选择：stdlib `http.server` + 三个静态文件，不引 Web 框架、不建前端构建链（对齐 ADR-0002 防过时）。
+
+限制（明确不做）：只做检索与出处，不做生成式问答；不做登录与多用户；单机自用不追求并发；
+高亮只是子串 / 中文二元组匹配，不是语义高亮。
+
+## 支持的格式
 | 格式 | 后端 | 说明 |
 |---|---|---|
 | `.md` / `.txt` | 内置 | 按标题结构切分 |

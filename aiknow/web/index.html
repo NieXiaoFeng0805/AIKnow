@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIKnow · 分区检索</title>
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<header>
+  <div class="brand">AIKnow<span class="sub">分区检索</span></div>
+  <div class="meta" id="meta">载入中…</div>
+  <button id="reindex" type="button" class="ghost">重新索引</button>
+</header>
+<main>
+  <aside class="zones" id="zones"></aside>
+  <section class="center">
+    <form id="searchform" class="searchbar">
+      <input id="q" type="search" placeholder="问一句话，只在选中的分区里找证据" autocomplete="off" autofocus>
+      <label class="toggle"><input type="checkbox" id="cross"> 跨区</label>
+      <input id="since" type="date" title="只看该日期之后的文档">
+      <button type="submit">检索</button>
+    </form>
+    <div id="status" class="status"></div>
+    <ol id="hits" class="hits"></ol>
+    <div id="empty" class="empty" hidden></div>
+  </section>
+  <aside id="drawer" class="drawer" hidden>
+    <button id="closeDrawer" class="ghost small" type="button">关闭</button>
+    <div id="drawerBody"></div>
+  </aside>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>

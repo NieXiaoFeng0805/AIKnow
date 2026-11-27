@@ -1,4 +1,4 @@
-"""命令行：python -m aiknow ask "问题" --zone life。
+"""命令行：aiknow ask "问题" --zone life / aiknow serve。
 
 分区驱动（docs/design-v3 §10）：ask 必须带 --zone；跨区必须显式 --zones。
 """
@@ -111,7 +111,18 @@ def main(argv: list[str] | None = None) -> int:
     index.add_argument("--zone", help="只统计该分区")
     _add_common(index)
 
+    live = sub.add_parser("serve", help="起本地页面（分区检索）")
+    live.add_argument("--host", default="127.0.0.1", help="监听地址（默认只本机）")
+    live.add_argument("--port", type=int, default=8000, help="端口（默认 8000）")
+    live.add_argument("--open", action="store_true", help="启动后打开浏览器")
+    _add_common(live)
+
     args = parser.parse_args(argv)
+    if args.cmd == "serve":
+        from aiknow.serve import serve
+
+        return serve(args.config, args.host, args.port, args.open)
+
     loaded = _load(args.config)
     if loaded is None:
         return 2

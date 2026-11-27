@@ -1,0 +1,12 @@
+# 演示用的分区注册表：直接把仓库自己的文档当数据源，不改动 kb/。
+# 用法：aiknow serve --config zones.demo.toml --port 8000
+
+[zones.study]
+name = "学习区"
+purpose = "方案、决策记录、旧会话导入（仓库自带内容）"
+sources = ["docs", "imports"]
+
+[zones.work]
+name = "工作区"
+purpose = "代码与测试（只扫 markdown）"
+sources = ["kb/work"]
